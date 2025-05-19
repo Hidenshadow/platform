@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>🔥 Dynamic Tasking Platform</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    body, html { margin: 0; padding: 0; }
+    #cover-page {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: linear-gradient(to bottom right, #003366, #006699);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    #header-bar {
+      background-color: #003366;
+      color: white;
+      text-align: center;
+      padding: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      font-family: 'Segoe UI', sans-serif;
+      z-index: 10000;
+      position: relative;
+    }
+
+    #user-panel {
+      position: fixed;
+      top: 60px;
+      right: 400px;
+      background: rgba(255,255,255,0.95);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 13px;
+      z-index: 9999;
+    }
+
+    #map { height: 92vh; }
+
+    .download-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #28a745;
+      color: white;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 1000;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.3);
+    }
+
+    .download-btn:hover { background-color: #218838; }
+
+    #legend {
+      position: fixed;
+      top: 60px;
+      left: 10px;
+      background: rgba(255,255,255,0.95);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 13px;
+      z-index: 9999;
+    }
+
+    #selected-panel {
+      position: fixed;
+      top: 60px;
+      right: 10px;
+      width: 280px;
+      max-height: 70vh;
+      overflow-y: auto;
+      background: rgba(255,255,255,0.95);
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 0px 2px 6px rgba(0,0,0,0.2);
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 13px;
+      z-index: 9999;
+    }
+
+    #selected-panel ul { list-style: none; padding: 0; margin: 0; }
+    #selected-panel li {
+      margin-bottom: 8px;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 6px;
+    }
+
+    .set-all-btn {
+      margin-top: 10px;
+      width: 100%;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .set-all-btn:hover {
+      background-color: #0056b3;
+    }
+
+    select, input[type="text"] {
+      padding: 4px;
+      margin: 4px 0;
+      border-radius: 4px;
+      border: 1px solid #aaa;
+      font-size: 13px;
+    }
+
+    button.small-btn {
+      margin-left: 4px;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      border: none;
+      background-color: #555;
+      color: white;
+      cursor: pointer;
+    }
+
+    button.small-btn:hover {
+      background-color: #000;
+    }
+  </style>
+</head>
+<body>
+
+
+<!-- 封面页 -->
+<div id="cover-page">
+  <div style="text-align: center;">
+    <h1 style="font-size: 42px; margin-bottom: 16px;">🔥 Dynamic Tasking Platform</h1>
+    <p style="font-size: 18px; margin-bottom: 32px;">
+      Coordinate satellite observations for fire monitoring
+    </p>
+    <button onclick="hideCoverPage()" style="
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #003366;
+      background-color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    ">Enter Platform</button>
+  </div>
+</div>
+
+<div id="header-bar">🛰️ Dynamic Tasking Platform</div>
+
+<!-- 用户管理 -->
+<div id="user-panel">
+  👤 User:
+  <select id="user-select" onchange="switchUser(this.value)"></select>
+  <input type="text" id="new-user" placeholder="New user" />
+  <button class="small-btn" onclick="addUser()">+ Add User</button>
+</div>
+
+<!-- 地图容器 -->
+<div id="map"></div>
+
+<!-- 图例 -->
+<div id="legend">
+  <strong>📍 Fire Point Selector</strong><br>
+  🔴 Not selected<br>
+  🟢 Selected<br>
+  💾 Export per-user CSV
+</div>
+
+<!-- 右侧面板 -->
+<div id="selected-panel">
+  <strong>📋 Selected Fire Points</strong>
+  <ul id="selected-list"></ul>
+  <button class="set-all-btn" onclick="setAllFrequency(12)">Set All to 12h</button>
+</div>
+
+<!-- 下载按钮 -->
+<button class="download-btn" onclick="downloadCSV()">Download CSV</button>
+
+<!-- 引入 Leaflet -->
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script src="fire_points.js"></script>
+
+<script>
+  const map = L.map('map').setView([-27.5, 150], 6);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CartoDB',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  // 用户数据结构
+  let users = {};
+  let currentUser = null;
+
+  // 所有火点与marker映射
+  let markers = [];
+
+  // 初始化默认用户
+  function initUserSystem() {
+    addUser("User1");
+  }
+  function hideCoverPage() {
+    const cover = document.getElementById('cover-page');
+    if (cover) cover.style.display = 'none';
+  }
+  function addUser(name = null) {
+    const input = document.getElementById("new-user");
+    const username = name || input.value.trim();
+    if (!username || users[username]) return alert("Invalid or duplicate username.");
+    users[username] = [];
+    const select = document.getElementById("user-select");
+    const option = document.createElement("option");
+    option.value = username;
+    option.text = username;
+    select.appendChild(option);
+    select.value = username;
+    input.value = "";
+    switchUser(username);
+  }
+
+  function switchUser(name) {
+    currentUser = name;
+    updateSelectedList();
+    updateMarkerStyles();
+  }
+
+  function togglePoint(point, marker) {
+    const list = users[currentUser];
+    const existing = list.find(p => p.lat === point.lat && p.lon === point.lon);
+    if (existing) {
+      users[currentUser] = list.filter(p => !(p.lat === point.lat && p.lon === point.lon));
+    } else {
+      users[currentUser].push({ ...point, frequency: null });
+    }
+    updateSelectedList();
+    updateMarkerStyles();
+  }
+
+  function updateMarkerStyles() {
+    markers.forEach(({ point, marker }) => {
+      const selected = users[currentUser]?.some(p => p.lat === point.lat && p.lon === point.lon);
+      if (selected) {
+        marker.setStyle({ fillColor: '#00ff88', color: '#007b5e', weight: 2 });
+      } else {
+        marker.setStyle({ fillColor: 'orange', color: 'crimson', weight: 1 });
+      }
+    });
+  }
+
+  function updateSelectedList() {
+    const list = document.getElementById("selected-list");
+    list.innerHTML = "";
+    users[currentUser]?.forEach((p, index) => {
+      const item = document.createElement("li");
+      const freqId = `freq-${index}`;
+      item.innerHTML = `
+        🔥 <strong>Fire #${index + 1}</strong><br>
+        Lat: ${p.lat.toFixed(4)}<br>
+        Lon: ${p.lon.toFixed(4)}<br>
+        Count: ${p.fire_count}<br>
+        ⏱️ <label for="${freqId}">Freq (h):</label>
+        <input type="number" id="${freqId}" value="${p.frequency || ''}" min="1" max="168"
+          style="width: 60px;" onchange="updateFrequency(${index}, this.value)">
+      `;
+      list.appendChild(item);
+    });
+  }
+
+  function updateFrequency(index, value) {
+    const freq = parseFloat(value);
+    if (!isNaN(freq) && freq > 0) {
+      users[currentUser][index].frequency = freq;
+    } else {
+      users[currentUser][index].frequency = null;
+    }
+  }
+
+  function setAllFrequency(hours) {
+    users[currentUser]?.forEach(p => p.frequency = hours);
+    updateSelectedList();
+  }
+
+  function downloadCSV() {
+    let csv = "username,lat_center,lon_center,fire_count,frequency_hours\n";
+    for (const [user, points] of Object.entries(users)) {
+      points.forEach(p => {
+        const freq = p.frequency || "";
+        csv += `${user},${p.lat},${p.lon},${p.fire_count},${freq}\n`;
+      });
+    }
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "selected_points_by_user.csv";
+    link.click();
+  }
+
+  // 初始化火点
+  firePoints.forEach(point => {
+    const marker = L.circleMarker([point.lat, point.lon], {
+      radius: 6 + Math.min(point.fire_count / 100, 10),
+      color: 'crimson',
+      fillColor: 'orange',
+      fillOpacity: 0.8,
+      weight: 1
+    }).addTo(map);
+
+    marker.bindPopup(
+      `🔥 <strong>Fire Count:</strong> ${point.fire_count}<br><strong>Lat:</strong> ${point.lat}<br><strong>Lon:</strong> ${point.lon}`
+    );
+
+    marker.on('click', () => {
+      if (!currentUser) return alert("Please select a user.");
+      togglePoint(point, marker);
+    });
+
+    markers.push({ point, marker });
+  });
+
+  initUserSystem(); // 初始化第一个默认用户
+</script>
+
+</body>
+</html>

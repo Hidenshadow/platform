@@ -144,8 +144,6 @@
 </head>
 <body>
 
-
-<!-- 封面页 -->
 <div id="cover-page">
   <div style="text-align: center;">
     <h1 style="font-size: 42px; margin-bottom: 16px;">🔥WP4: Dynamic Tasking Platform🔥</h1>
@@ -167,7 +165,6 @@
 
 <div id="header-bar">🛰️ Dynamic Tasking Platform</div>
 
-<!-- 用户管理 -->
 <div id="user-panel">
   👤 User:
   <select id="user-select" onchange="switchUser(this.value)"></select>
@@ -175,10 +172,8 @@
   <button class="small-btn" onclick="addUser()">+ Add User</button>
 </div>
 
-<!-- 地图容器 -->
 <div id="map"></div>
 
-<!-- 图例 -->
 <div id="legend">
   <strong>📍 Fire Point Selector</strong><br>
   🔴 Not selected<br>
@@ -186,17 +181,14 @@
   💾 Export per-user CSV
 </div>
 
-<!-- 右侧面板 -->
 <div id="selected-panel">
   <strong>📋 Selected Fire Points</strong>
   <ul id="selected-list"></ul>
   <button class="set-all-btn" onclick="setAllFrequency(12)">Set All to 12h</button>
 </div>
 
-<!-- 下载按钮 -->
 <button class="download-btn" onclick="downloadCSV()">Download CSV</button>
 
-<!-- 引入 Leaflet -->
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script src="fire_points.js"></script>
 
@@ -209,14 +201,11 @@
     maxZoom: 19
   }).addTo(map);
 
-  // 用户数据结构
   let users = {};
   let currentUser = null;
 
-  // 所有火点与marker映射
   let markers = [];
 
-  // 初始化默认用户
   function initUserSystem() {
     addUser("User1");
   }
@@ -316,7 +305,6 @@
     link.click();
   }
 
-  // 初始化火点
   firePoints.forEach(point => {
     const marker = L.circleMarker([point.lat, point.lon], {
       radius: 6 + Math.min(point.fire_count / 100, 10),
@@ -338,7 +326,7 @@
     markers.push({ point, marker });
   });
 
-  initUserSystem(); // 初始化第一个默认用户
+  initUserSystem(); 
 </script>
 
 </body>

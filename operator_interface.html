@@ -2,176 +2,262 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>🚀 Firepoint Satellite Coverage Explorer</title>
+  <title>🚀 Fire Area Satellite Coverage Explorer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
-  <!-- Flatpickr CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
   <style>
     body, html { margin: 0; padding: 0; height: 100%; }
-    /* Cover Page Styles */
-    #cover { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #004080; color: #fff;
-             display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 9999; }
-    #cover h1 { font-size: 3em; margin: 0.2em; }
-    #cover p { font-size: 1.2em; margin: 0.2em; }
-    #cover button { margin-top: 1em; padding: 12px 24px; font-size: 1em; background: #0066cc; border: none; border-radius: 6px; cursor: pointer; color: #fff; }
-    #cover button:hover { background: #005bb5; }
-    /* Main Content Hidden Initially */
-    #main-content { display: none; }
-    /* Controls */
-    #controls { background: #004080; color: #fff; padding: 12px 20px; display: flex; gap: 20px; align-items: center; }
-    #controls label { font-weight: bold; }
-    #controls input { padding: 6px; border-radius: 4px; border: none; width: 160px; }
-    #controls button { padding: 8px 16px; background: #0066cc; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
-    #controls button:hover { background: #005bb5; }
-    /* Map & Summary */
-    #map { height: 60vh; }
-    #summary { padding: 20px; background: #fff; }
-    #summary h3 { margin-top: 0; color: #004080; }
-    #summary ul { list-style: none; padding: 0; margin: 0; }
-    #summary li { padding: 8px 0; border-bottom: 1px solid #ddd; }
-    #summary li:last-child { border-bottom: none; }
-    .firepoint { font-weight: bold; }
+    #cover { position: fixed; top:0; left:0; width:100%; height:100%; background:#004080; color:#fff;
+      display:flex; align-items:center; justify-content:center; flex-direction:column; z-index:9999; }
+    #cover h1 { font-size:3em; margin:0.2em; }
+    #cover p { font-size:1.2em; margin:0.2em; }
+    #cover button { margin-top:1em; padding:12px 24px; font-size:1em;
+      background:#0066cc; border:none; border-radius:6px; cursor:pointer; color:#fff; }
+    #cover button:hover { background:#005bb5; }
+    #main-content { display:none; flex-direction:column; height:100%; }
+    #controls {
+      background:#004080; color:#fff; padding:12px 20px; display:flex; gap:20px;
+      align-items:center; flex-wrap:wrap;
+    }
+    #controls label { font-weight:bold; }
+    #controls input { padding:6px; border-radius:4px; border:none; width:160px; }
+    #controls button { padding:8px 16px; background:#0066cc; color:#fff;
+      border:none; border-radius:4px; cursor:pointer; }
+    #controls button:hover { background:#005bb5; }
+    #satellite-list {
+      padding:10px 20px; background:#f8f8f8; display:flex;
+      flex-wrap:wrap; gap:12px; align-items:center; font-size:0.95em;
+    }
+    #map { flex:1; height:60vh; }
+    #summary { padding:20px; background:#fff; }
+    #summary h3 { margin-top:0; color:#004080; cursor:pointer; }
+    #summary-list { font-size:0.85em; display:none; }
+    #summary-list.open { display:block; }
+    #summary ul { list-style:none; padding:0; margin:0; }
+    #summary li { padding:6px 0; border-bottom:1px solid #ddd; }
+    #summary li:last-child { border-bottom:none; }
+    .firepoint { font-weight:bold; }
+    .sat-checkbox { display:inline-flex; align-items:center; gap:4px; }
+    .sat-label {
+      background:rgba(255,255,255,0.8); padding:2px 6px; border-radius:4px;
+      font-size:0.8em; color:#000; white-space:nowrap;
+    }
   </style>
 </head>
 <body>
-  <!-- Cover Page -->
   <div id="cover">
     <h1>🔥 WP4: Dynamic Tasking Platform 🔥</h1>
     <p>🔥Use-case: Dynamic Planning for Fire Monitoring Tasks🔥</p>
     <button onclick="enterApp()">Enter Platform</button>
   </div>
-
-  <!-- Main Application Content -->
   <div id="main-content">
     <div id="controls">
       <label>Start Time: <input id="startTime" placeholder="2025-05-01 00:00" /></label>
-      <label>End Time:   <input id="endTime"   placeholder="2025-05-07 23:59" /></label>
+      <label>End Time: <input id="endTime" placeholder="2025-05-07 23:59" /></label>
       <button onclick="applyFilter()">Apply Filter</button>
+      <button onclick="clearTracks()" style="background:#cc0000;">Clear Tracks</button>
     </div>
-    <!-- Usage Instructions -->
+    <div id="satellite-list"><strong>Satellite Track Selection:</strong></div>
     <div id="instructions" style="background:#eef5ff; padding:10px 20px;">
-      <strong>Instructions:</strong> Select a start and end time within May 1–7, 2025, then click <em>Apply Filter</em>. Map points covered in that period will be highlighted in red. Click a point to view satellite overpass events, and see summary below.
+      <strong>Instructions:</strong> Select a start/end time within May 1–7, 2025, then click <em>Apply Filter</em>.
+      Map points covered in that period will be highlighted in red. Click a point to view overpass events,
+      and see summary below.
     </div>
     <div id="map"></div>
     <div id="summary">
-      <h3>📊 Firepoint Visit Summary</h3>
+      <h3 onclick="toggleSummary()">📊 Fire Area Visit Summary (Click to Expand/Collapse)</h3>
       <div id="summary-list"><p>Please apply filter to view results.</p></div>
     </div>
   </div>
 
-  <!-- Libraries -->
   <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script>
-    // Cover Page Transition
+    function toggleSummary() {
+      document.getElementById('summary-list').classList.toggle('open');
+    }
     function enterApp() {
       document.getElementById('cover').style.display = 'none';
-      document.getElementById('main-content').style.display = 'block';
-      // Fix for Leaflet map rendering when container becomes visible
-      setTimeout(() => {
-        map.invalidateSize();
-      }, 100);
+      document.getElementById('main-content').style.display = 'flex';
+      setTimeout(() => map.invalidateSize(), 200);
     }
 
-    // Initialize map
     const map = L.map('map').setView([-25, 135], 5);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OSM' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
 
-    let coverageData = [], filteredData = [], markers = [];
+    let coverageData = [], filteredData = [], markers = [], trackLayers = [];
 
-    // Date pickers
-    flatpickr('#startTime', { enableTime: true, dateFormat: 'Y-m-d H:i', minDate: '2025-05-01 00:00', maxDate: '2025-05-07 23:59', defaultDate: '2025-05-01 00:00' });
-    flatpickr('#endTime',   { enableTime: true, dateFormat: 'Y-m-d H:i', minDate: '2025-05-01 00:00', maxDate: '2025-05-07 23:59', defaultDate: '2025-05-07 23:59' });
+    flatpickr('#startTime', {
+      enableTime: true,
+      dateFormat: 'Y-m-d H:i',
+      minDate: '2025-05-01 12:00',
+      maxDate: '2025-05-07 23:59'
+    });
+    flatpickr('#endTime', {
+      enableTime: true,
+      dateFormat: 'Y-m-d H:i',
+      minDate: '2025-05-01 12:00',
+      maxDate: '2025-05-07 23:59'
+    });
 
-    // CSV parser
     function loadCSV(text) {
       const lines = text.trim().split('\n');
       const headers = lines.shift().split(',');
       return lines.map(line => {
-        const cols = line.split(','); const obj = {};
+        const cols = line.split(','), obj = {};
         headers.forEach((h,i) => obj[h.trim()] = cols[i]);
-        obj.lat = parseFloat(obj.lat); obj.lon = parseFloat(obj.lon);
+        obj.lat = parseFloat(obj.lat);
+        obj.lon = parseFloat(obj.lon);
         return obj;
       });
     }
 
-    // Plot UR markers
+    function populateSatelliteCheckboxes(data) {
+      const container = document.getElementById('satellite-list');
+      const sats = [...new Set(data.map(d => d.satellite))].sort();
+      sats.forEach(sat => {
+        const label = document.createElement('label');
+        label.className = 'sat-checkbox';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = sat;
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(' ' + sat));
+        container.appendChild(label);
+      });
+    }
+
     function plotPoints(data) {
-      markers.forEach(m => map.removeLayer(m)); markers = [];
+      markers.forEach(m => map.removeLayer(m.marker));
+      markers = [];
       data.forEach(d => {
-        const marker = L.circleMarker([d.lat, d.lon], { radius:7, color:'#0055a5', fillColor:'#3399ff', fillOpacity:0.7 }).addTo(map);
+        const marker = L.circleMarker([d.lat, d.lon], {
+          radius:7, color:'#0055a5', fillColor:'#3399ff', fillOpacity:0.7
+        }).addTo(map);
         marker.on('click', () => marker.bindPopup(generatePopup(d.user_request)).openPopup());
         markers.push({ marker, name: d.user_request });
       });
     }
 
-    // Popup content generator
     function generatePopup(name) {
       const events = filteredData.filter(e => e.user_request === name);
       if (!events.length) return '<p>No coverage in this period.</p>';
-      let html = `<h4 class='firepoint'>${name}</h4><ul>`;
-      events.forEach(e => html += `<li><strong>${e.satellite}</strong>: ${e.start_utc} → ${e.end_utc}</li>`);
-      html += '</ul>'; return html;
+      return `<h4 class="firepoint">${name}</h4><ul>` +
+        events.map(e => `<li><strong>${e.satellite}</strong>: ${e.start_utc} → ${e.end_utc}</li>`).join('') +
+        '</ul>';
     }
 
-    // Update summary list
     function updateSummary() {
       const stats = {}, sats = {};
       filteredData.forEach(d => {
         const name = d.user_request;
-        stats[name] = stats[name]||[]; sats[name] = sats[name]||new Set();
-        stats[name].push(new Date(d.start_utc.replace('+00:00Z','Z')).getTime());
+        stats[name] = stats[name] || [];
+        sats[name] = sats[name] || new Set();
+        stats[name].push(new Date(d.start_utc.replace(/\+00:00Z$/, 'Z')).getTime());
         sats[name].add(d.satellite);
       });
-      const keys = Object.keys(stats).sort((a,b)=>{
-        const order=['UR1','UR2','UR3'];
-        const pa=a.split('-')[0], pb=b.split('-')[0];
-        const ia=order.indexOf(pa), ib=order.indexOf(pb);
-        if(ia!==ib) return ia-ib;
-        return parseInt(a.split('-')[1]||0) - parseInt(b.split('-')[1]||0);
+      const el = document.getElementById('summary-list');
+      const keys = Object.keys(stats);
+      if (!keys.length) return el.innerHTML = '<p>No data for selected range.</p>';
+      let html = '<ul>';
+      keys.forEach(name => {
+        const times = stats[name].sort((a,b)=>a-b);
+        const ivs = times.slice(1).map((t,i) => (t - times[i]) / 60000);
+        const avg = ivs.length ? (ivs.reduce((a,b)=>a+b)/ivs.length).toFixed(2) : 'N/A';
+        const max = ivs.length ? Math.max(...ivs).toFixed(2) : 'N/A';
+        html += `<li><strong>${name}</strong>: Visits: ${stats[name].length}, ` +
+          `Avg: ${avg} min, Max: ${max} min, Satellites: ${[...sats[name]].join(', ')}</li>`;
       });
-      const el=document.getElementById('summary-list');
-      if(!keys.length){el.innerHTML='<p>No data for selected range.</p>';return;}
-      let html='<ul>';
-      keys.forEach(name=>{
-        const times=stats[name].sort((x,y)=>x-y);
-        const ivs=times.slice(1).map((t,i)=>(t-times[i])/60000);
-        const visits=stats[name].length;
-        const avg=ivs.length? (ivs.reduce((a,b)=>a+b)/ivs.length).toFixed(2):'N/A';
-        const max=ivs.length? Math.max(...ivs).toFixed(2):'N/A';
-        const satList=Array.from(sats[name]).join(', ');
-        html+=`<li><strong>${name}</strong>: Visits: ${visits}, Avg: ${avg} min, Max: ${max} min, Satellites: ${satList}</li>`;
-      });
-      html+='</ul>'; el.innerHTML=html;
+      el.innerHTML = html + '</ul>';
     }
 
-    // Apply filter
-    function applyFilter(){
-      const start=new Date(document.getElementById('startTime').value);
-      const end=new Date(document.getElementById('endTime').value);
-      filteredData=coverageData.filter(d=>{
-        const s=new Date(d.start_utc.replace('+00:00Z','Z'));
-        const e=new Date(d.end_utc.replace('+00:00Z','Z'));
-        return e>=start && s<=end;
+    function clearTracks() {
+      trackLayers.forEach(l => map.removeLayer(l));
+      trackLayers = [];
+    }
+
+    function handleLongitudeWrap(points) {
+      const segments = [], current = [points[0]];
+      for (let i = 1; i < points.length; i++) {
+        const [_, lonPrev] = points[i-1], [__, lonCurr] = points[i];
+        if (Math.abs(lonCurr - lonPrev) > 180) {
+          segments.push([...current]);
+          current.length = 0;
+        }
+        current.push(points[i]);
+      }
+      if (current.length > 1) segments.push(current);
+      return segments;
+    }
+
+    function getColor(name) {
+      const palette = ['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231',
+                       '#911eb4','#46f0f0','#f032e6','#bcf60c','#fabebe'];
+      let hash = 0;
+      for (let c of name) hash = c.charCodeAt(0) + ((hash << 5) - hash);
+      return palette[Math.abs(hash) % palette.length];
+    }
+
+    function drawTracks(start, end) {
+      clearTracks();
+      const selected = Array.from(document.querySelectorAll('#satellite-list input:checked'))
+                            .map(e => e.value);
+      selected.forEach(sat => {
+        fetch(`tracks/${sat.replace(/ /g,'_')}_track.csv`)
+          .then(r => r.text())
+          .then(txt => {
+            const pts = txt.trim().split('\n').slice(1).map(l => {
+              const [t, lat, lon] = l.split(',');
+              const d = new Date(t);
+              if (d >= start && d <= end) return [+lat, +lon];
+              return null;
+            }).filter(Boolean);
+            if (pts.length > 1) {
+              const color = getColor(sat);
+              handleLongitudeWrap(pts).forEach(seg =>
+                trackLayers.push(L.polyline(seg, { color, weight: 2 }).addTo(map))
+              );
+              const mid = pts[Math.floor(pts.length/2)];
+              trackLayers.push(
+                L.marker(mid, { icon: L.divIcon({ className:'sat-label', html:sat }) })
+                 .addTo(map)
+              );
+            }
+          });
+      });
+    }
+
+    // 关键：合并了 replace() + drawTracks()
+    function applyFilter() {
+      const start = new Date(document.getElementById('startTime').value);
+      const end   = new Date(document.getElementById('endTime').value);
+      filteredData = coverageData.filter(d => {
+        const s = new Date(d.start_utc.replace(/\+00:00Z$/, 'Z'));
+        const e = new Date(d.end_utc.replace(/\+00:00Z$/, 'Z'));
+        return e >= start && s <= end;
       });
       plotPoints(coverageData);
-      markers.forEach(o=>{
-        const {marker,name}=o;
-        const cov=filteredData.some(d=>d.user_request===name);
-        marker.setStyle({ color:cov?'#d90000':'#0055a5', fillColor:cov?'#ff6666':'#3399ff' });
+      markers.forEach(o => {
+        const { marker, name } = o;
+        const cov = filteredData.some(d => d.user_request === name);
+        marker.setStyle({
+          color: cov ? '#d90000' : '#0055a5',
+          fillColor: cov ? '#ff6666' : '#3399ff'
+        });
       });
       updateSummary();
+      drawTracks(start, end);
     }
 
-    // Initial load
+    // 初始加载
     fetch('satellite_pass_intervals_with_duration.csv')
-      .then(r=>r.text()).then(txt=>{
-        coverageData=loadCSV(txt);
-        filteredData=coverageData;
+      .then(r => r.text())
+      .then(txt => {
+        coverageData = loadCSV(txt);
+        filteredData = coverageData;
         plotPoints(coverageData);
+        populateSatelliteCheckboxes(coverageData);
         updateSummary();
       });
   </script>

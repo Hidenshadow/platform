@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>🚀 Firepoint Satellite Coverage Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <!-- Flatpickr CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  <style>
+    body, html { margin: 0; padding: 0; height: 100%; }
+    /* Cover Page Styles */
+    #cover { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #004080; color: #fff;
+             display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 9999; }
+    #cover h1 { font-size: 3em; margin: 0.2em; }
+    #cover p { font-size: 1.2em; margin: 0.2em; }
+    #cover button { margin-top: 1em; padding: 12px 24px; font-size: 1em; background: #0066cc; border: none; border-radius: 6px; cursor: pointer; color: #fff; }
+    #cover button:hover { background: #005bb5; }
+    /* Main Content Hidden Initially */
+    #main-content { display: none; }
+    /* Controls */
+    #controls { background: #004080; color: #fff; padding: 12px 20px; display: flex; gap: 20px; align-items: center; }
+    #controls label { font-weight: bold; }
+    #controls input { padding: 6px; border-radius: 4px; border: none; width: 160px; }
+    #controls button { padding: 8px 16px; background: #0066cc; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+    #controls button:hover { background: #005bb5; }
+    /* Map & Summary */
+    #map { height: 60vh; }
+    #summary { padding: 20px; background: #fff; }
+    #summary h3 { margin-top: 0; color: #004080; }
+    #summary ul { list-style: none; padding: 0; margin: 0; }
+    #summary li { padding: 8px 0; border-bottom: 1px solid #ddd; }
+    #summary li:last-child { border-bottom: none; }
+    .firepoint { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <!-- Cover Page -->
+  <div id="cover">
+    <h1>🔥 WP4: Dynamic Tasking Platform 🔥</h1>
+    <p>🔥Use-case: Dynamic Planning for Fire Monitoring Tasks (Operator)🔥</p>
+    <button onclick="enterApp()">Enter Platform</button>
+  </div>
+
+  <!-- Main Application Content -->
+  <div id="main-content">
+    <div id="controls">
+      <label>Start Time: <input id="startTime" placeholder="2025-05-01 00:00" /></label>
+      <label>End Time:   <input id="endTime"   placeholder="2025-05-07 23:59" /></label>
+      <button onclick="applyFilter()">Apply Filter</button>
+    </div>
+    <div id="map"></div>
+    <div id="summary">
+      <h3>📊 Firepoint Visit Summary</h3>
+      <div id="summary-list"><p>Please apply filter to view results.</p></div>
+    </div>
+  </div>
+
+  <!-- Libraries -->
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.js"></script>
+
+  <script>
+    // Cover Page Transition
+    function enterApp() {
+      document.getElementById('cover').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      // Fix for Leaflet map rendering when container becomes visible
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+    }
+
+    // Initialize map
+    const map = L.map('map').setView([-25, 135], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OSM' }).addTo(map);
+
+    let coverageData = [], filteredData = [], markers = [];
+
+    // Date pickers
+    flatpickr('#startTime', { enableTime: true, dateFormat: 'Y-m-d H:i', minDate: '2025-05-01 00:00', maxDate: '2025-05-07 23:59', defaultDate: '2025-05-01 00:00' });
+    flatpickr('#endTime',   { enableTime: true, dateFormat: 'Y-m-d H:i', minDate: '2025-05-01 00:00', maxDate: '2025-05-07 23:59', defaultDate: '2025-05-07 23:59' });
+
+    // CSV parser
+    function loadCSV(text) {
+      const lines = text.trim().split('\n');
+      const headers = lines.shift().split(',');
+      return lines.map(line => {
+        const cols = line.split(','); const obj = {};
+        headers.forEach((h,i) => obj[h.trim()] = cols[i]);
+        obj.lat = parseFloat(obj.lat); obj.lon = parseFloat(obj.lon);
+        return obj;
+      });
+    }
+
+    // Plot UR markers
+    function plotPoints(data) {
+      markers.forEach(m => map.removeLayer(m)); markers = [];
+      data.forEach(d => {
+        const marker = L.circleMarker([d.lat, d.lon], { radius:7, color:'#0055a5', fillColor:'#3399ff', fillOpacity:0.7 }).addTo(map);
+        marker.on('click', () => marker.bindPopup(generatePopup(d.user_request)).openPopup());
+        markers.push({ marker, name: d.user_request });
+      });
+    }
+
+    // Popup content generator
+    function generatePopup(name) {
+      const events = filteredData.filter(e => e.user_request === name);
+      if (!events.length) return '<p>No coverage in this period.</p>';
+      let html = `<h4 class='firepoint'>${name}</h4><ul>`;
+      events.forEach(e => html += `<li><strong>${e.satellite}</strong>: ${e.start_utc} → ${e.end_utc}</li>`);
+      html += '</ul>'; return html;
+    }
+
+    // Update summary list
+    function updateSummary() {
+      const stats = {}, sats = {};
+      filteredData.forEach(d => {
+        const name = d.user_request;
+        stats[name] = stats[name]||[]; sats[name] = sats[name]||new Set();
+        stats[name].push(new Date(d.start_utc.replace('+00:00Z','Z')).getTime());
+        sats[name].add(d.satellite);
+      });
+      const keys = Object.keys(stats).sort((a,b)=>{
+        const order=['UR1','UR2','UR3'];
+        const pa=a.split('-')[0], pb=b.split('-')[0];
+        const ia=order.indexOf(pa), ib=order.indexOf(pb);
+        if(ia!==ib) return ia-ib;
+        return parseInt(a.split('-')[1]||0) - parseInt(b.split('-')[1]||0);
+      });
+      const el=document.getElementById('summary-list');
+      if(!keys.length){el.innerHTML='<p>No data for selected range.</p>';return;}
+      let html='<ul>';
+      keys.forEach(name=>{
+        const times=stats[name].sort((x,y)=>x-y);
+        const ivs=times.slice(1).map((t,i)=>(t-times[i])/60000);
+        const visits=stats[name].length;
+        const avg=ivs.length? (ivs.reduce((a,b)=>a+b)/ivs.length).toFixed(2):'N/A';
+        const max=ivs.length? Math.max(...ivs).toFixed(2):'N/A';
+        const satList=Array.from(sats[name]).join(', ');
+        html+=`<li><strong>${name}</strong>: Visits: ${visits}, Avg: ${avg} min, Max: ${max} min, Satellites: ${satList}</li>`;
+      });
+      html+='</ul>'; el.innerHTML=html;
+    }
+
+    // Apply filter
+    function applyFilter(){
+      const start=new Date(document.getElementById('startTime').value);
+      const end=new Date(document.getElementById('endTime').value);
+      filteredData=coverageData.filter(d=>{
+        const s=new Date(d.start_utc.replace('+00:00Z','Z'));
+        const e=new Date(d.end_utc.replace('+00:00Z','Z'));
+        return e>=start && s<=end;
+      });
+      plotPoints(coverageData);
+      markers.forEach(o=>{
+        const {marker,name}=o;
+        const cov=filteredData.some(d=>d.user_request===name);
+        marker.setStyle({ color:cov?'#d90000':'#0055a5', fillColor:cov?'#ff6666':'#3399ff' });
+      });
+      updateSummary();
+    }
+
+    // Initial load
+    fetch('satellite_pass_intervals_with_duration.csv')
+      .then(r=>r.text()).then(txt=>{
+        coverageData=loadCSV(txt);
+        filteredData=coverageData;
+        plotPoints(coverageData);
+        updateSummary();
+      });
+  </script>
+</body>
+</html>

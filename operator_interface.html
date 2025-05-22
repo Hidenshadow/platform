@@ -39,7 +39,7 @@
   <!-- Cover Page -->
   <div id="cover">
     <h1>🔥 WP4: Dynamic Tasking Platform 🔥</h1>
-    <p>🔥Use-case: Dynamic Planning for Fire Monitoring Tasks (Operator)🔥</p>
+    <p>🔥Use-case: Dynamic Planning for Fire Monitoring Tasks🔥</p>
     <button onclick="enterApp()">Enter Platform</button>
   </div>
 
@@ -49,6 +49,10 @@
       <label>Start Time: <input id="startTime" placeholder="2025-05-01 00:00" /></label>
       <label>End Time:   <input id="endTime"   placeholder="2025-05-07 23:59" /></label>
       <button onclick="applyFilter()">Apply Filter</button>
+    </div>
+    <!-- Usage Instructions -->
+    <div id="instructions" style="background:#eef5ff; padding:10px 20px;">
+      <strong>Instructions:</strong> Select a start and end time within May 1–7, 2025, then click <em>Apply Filter</em>. Map points covered in that period will be highlighted in red. Click a point to view satellite overpass events, and see summary below.
     </div>
     <div id="map"></div>
     <div id="summary">

@@ -298,9 +298,50 @@
   }
 
   function switchUser(name) {
+    // 检查当前用户是否有未填写 frequency 的火点
+    if (currentUser && users[currentUser] && users[currentUser].some(p => !p.frequency)) {
+      const action = confirmUnsavedPoints();
+      if (action === 'export') {
+        downloadCurrentUserCSV();
+      } else if (action === 'cancel') {
+        // 取消切换
+        const select = document.getElementById('user-select');
+        select.value = currentUser;
+        return;
+      }
+      // 继续切换
+    }
     currentUser = name;
     updateSelectedList();
     updateMarkerStyles();
+  }
+
+  // 弹窗提示函数
+  function confirmUnsavedPoints() {
+    // 使用自定义弹窗，返回 'export' | 'continue' | 'cancel'
+    // 这里用 window.confirm 简化实现
+    if (window.confirm('You have fire points with empty frequency. Click OK to export, Cancel to continue without exporting.')) {
+      return 'export';
+    } else {
+      if (!window.confirm('Are you sure you want to switch user without exporting?')) {
+        return 'cancel';
+      }
+      return 'continue';
+    }
+  }
+
+  // 只导出当前用户的火点数据
+  function downloadCurrentUserCSV() {
+    let csv = "username,lat_center,lon_center,fire_count,frequency_hours\n";
+    users[currentUser]?.forEach(p => {
+      const freq = p.frequency || "";
+      csv += `${currentUser},${p.lat},${p.lon},${p.fire_count},${freq}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${currentUser}_selected_points.csv`;
+    link.click();
   }
 
   function togglePoint(point, marker) {

@@ -215,6 +215,11 @@
 
 <!-- 右侧面板 -->
 <div id="selected-panel">
+  <div style="margin-bottom:10px;">
+    <input type="number" id="custom-lat" placeholder="Lat" step="any" style="width:90px;">&nbsp;
+    <input type="number" id="custom-lon" placeholder="Lon" step="any" style="width:90px;">&nbsp;
+    <button class="small-btn" onclick="addCustomPoint()">Add</button>
+  </div>
   <strong>📋 Selected Fire Points</strong>
   <ul id="selected-list"></ul>
   <button class="set-all-btn" onclick="setAllFrequency(12)">Set All to 12h</button>
@@ -356,13 +361,57 @@
     updateMarkerStyles();
   }
 
+  // 自定义正方形marker
+  function createSquareMarker(latlng, options) {
+    return L.rectangle([
+      [latlng[0] - 0.15, latlng[1] - 0.15],
+      [latlng[0] + 0.15, latlng[1] + 0.15]
+    ], options);
+  }
+
+  // 修改updateMarkerStyles函数：未选中为方块，被选中为绿色圆圈
   function updateMarkerStyles() {
     markers.forEach(({ point, marker }) => {
       const selected = users[currentUser]?.some(p => p.lat === point.lat && p.lon === point.lon);
       if (selected) {
-        marker.setStyle({ fillColor: '#00ff88', color: '#007b5e', weight: 2 });
+        // 替换为绿色圆圈
+        map.removeLayer(marker);
+        const circle = L.circleMarker([point.lat, point.lon], {
+          radius: 12,
+          color: '#007b5e',
+          fillColor: '#00ff88',
+          fillOpacity: 0.8,
+          weight: 2
+        }).addTo(map);
+        circle.bindPopup(marker.getPopup().getContent());
+        circle.on('click', () => {
+          if (!currentUser) return alert("Please select a user.");
+          togglePoint(point, circle);
+          updateMarkerStyles();
+        });
+        // 标记为圆圈
+        circle._isCircle = true;
+        markers.find(m => m.point === point).marker = circle;
       } else {
-        marker.setStyle({ fillColor: 'orange', color: 'crimson', weight: 1 });
+        // 替换为方块
+        if (marker._isCircle) {
+          map.removeLayer(marker);
+          const square = createSquareMarker([point.lat, point.lon], {
+            color: 'crimson',
+            fillColor: 'orange',
+            fillOpacity: 0.8,
+            weight: 1
+          }).addTo(map);
+          square.bindPopup(marker.getPopup().getContent());
+          square.on('click', () => {
+            if (!currentUser) return alert("Please select a user.");
+            togglePoint(point, square);
+            updateMarkerStyles();
+          });
+          // 标记为方块
+          square._isCircle = false;
+          markers.find(m => m.point === point).marker = square;
+        }
       }
     });
   }
@@ -381,6 +430,7 @@
         ⏱️ <label for="${freqId}">Freq (h):</label>
         <input type="number" id="${freqId}" value="${p.frequency || ''}" min="1" max="168"
           style="width: 60px;" onchange="updateFrequency(${index}, this.value)">
+        <button class="small-btn" onclick="removeSelectedPoint(${index})">Delete</button>
       `;
       list.appendChild(item);
     });
@@ -415,15 +465,62 @@
     link.click();
   }
 
-  // 初始化火点
-  firePoints.forEach(point => {
-    const marker = L.circleMarker([point.lat, point.lon], {
-      radius: 6 + Math.min(point.fire_count / 100, 10),
+  // 删除已选火点
+  function removeSelectedPoint(index) {
+    users[currentUser].splice(index, 1);
+    updateSelectedList();
+    updateMarkerStyles();
+  }
+
+  // 用户自定义添加经纬度点
+  function addCustomPoint() {
+    const lat = parseFloat(document.getElementById('custom-lat').value);
+    const lon = parseFloat(document.getElementById('custom-lon').value);
+    if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+      alert('Please enter valid latitude and longitude!');
+      return;
+    }
+    // 检查是否已存在
+    if (users[currentUser]?.some(p => p.lat === lat && p.lon === lon)) {
+      alert('This point is already in the selected list!');
+      return;
+    }
+    // 构造火点对象
+    const customPoint = { lat, lon, fire_count: 0, frequency: null };
+    users[currentUser].push(customPoint);
+    updateSelectedList();
+    updateMarkerStyles();
+    // 在地图上添加marker
+    const marker = createSquareMarker([lat, lon], {
       color: 'crimson',
       fillColor: 'orange',
       fillOpacity: 0.8,
       weight: 1
     }).addTo(map);
+    marker._isCircle = false;
+    marker.bindPopup(
+      `<strong>Custom Point</strong><br>Lat: ${lat}<br>Lon: ${lon}`
+    );
+    marker.on('click', () => {
+      if (!currentUser) return alert("Please select a user.");
+      togglePoint(customPoint, marker);
+      updateMarkerStyles();
+    });
+    markers.push({ point: customPoint, marker });
+    // 清空输入框
+    document.getElementById('custom-lat').value = '';
+    document.getElementById('custom-lon').value = '';
+  }
+
+  // 初始化火点
+  firePoints.forEach(point => {
+    const marker = createSquareMarker([point.lat, point.lon], {
+      color: 'crimson',
+      fillColor: 'orange',
+      fillOpacity: 0.8,
+      weight: 1
+    }).addTo(map);
+    marker._isCircle = false;
 
     marker.bindPopup(
       `🔥 <strong>Fire Count:</strong> ${point.fire_count}<br><strong>Lat:</strong> ${point.lat}<br><strong>Lon:</strong> ${point.lon}`
@@ -432,6 +529,7 @@
     marker.on('click', () => {
       if (!currentUser) return alert("Please select a user.");
       togglePoint(point, marker);
+      updateMarkerStyles();
     });
 
     markers.push({ point, marker });

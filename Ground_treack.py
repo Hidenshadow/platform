@@ -51,4 +51,4 @@ if __name__ == '__main__':
     # Example usage
     tle_file = '/Users/jianglinqiao/Desktop/Fire_location/satellites_10.tle'
     output_folder = '/Users/jianglinqiao/Desktop/Fire_location/tracks'
-    generate_satellite_tracks(tle_file, output_folder, (2025, 5, 1, 0, 0, 0), (2025, 5, 7, 23, 59, 0), step_minutes=2)
+    generate_satellite_tracks(tle_file, output_folder, (2025, 6, 25, 0, 0, 0), (2025, 7, 25, 23, 59, 0), step_minutes=2)

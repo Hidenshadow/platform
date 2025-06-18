@@ -19,8 +19,8 @@ output_path = '/Users/jianglinqiao/Desktop/Fire_location/satellite_pass_interval
 
 # ----------- 时间设置（每分钟采样） -----------
 ts = load.timescale()
-start_dt = datetime(2025, 5, 1, 0, 0, tzinfo=timezone.utc)
-end_dt   = datetime(2025, 5, 7, 23, 59, tzinfo=timezone.utc)
+start_dt = datetime(2025, 6, 25, 0, 0, tzinfo=timezone.utc)
+end_dt   = datetime(2025, 7, 25, 23, 59, tzinfo=timezone.utc)
 minutes = int((end_dt - start_dt).total_seconds() // 60)
 
 datetime_list = [start_dt + timedelta(minutes=i) for i in range(minutes)]
